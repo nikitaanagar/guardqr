@@ -33,6 +33,10 @@ const ProfileSchema = new mongoose.Schema({
     type: Boolean,
     default: true,
   },
+  paid: {
+    type: Boolean,
+    default: false,
+  },
 }, { timestamps: true });
 
 module.exports = mongoose.model('Profile', ProfileSchema);

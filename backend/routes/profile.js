@@ -42,7 +42,9 @@ router.get('/public/:id', async (req, res) => {
     if (!profile) {
       return res.status(404).json({ msg: 'Profile not found' });
     }
-    // Check privacy toggle - we send hidePhone boolean and frontend will handle it
+    if (!profile.paid) {
+      return res.json({ name: profile.name, paid: false });
+    }
     res.json(profile);
   } catch (err) {
     console.error(err.message);
@@ -93,6 +95,28 @@ router.delete('/:id', auth, async (req, res) => {
 
     await Profile.findByIdAndDelete(req.params.id);
     res.json({ msg: 'Profile removed' });
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).send('Server Error');
+  }
+});
+
+// @route   PUT api/profile/:id/pay
+// @desc    Mark profile as paid
+// @access  Private
+router.put('/:id/pay', auth, async (req, res) => {
+  try {
+    let profile = await Profile.findById(req.params.id);
+    if (!profile) return res.status(404).json({ msg: 'Profile not found' });
+
+    // Make sure user owns profile
+    if (profile.user.toString() !== req.user.id) {
+      return res.status(401).json({ msg: 'Not authorized' });
+    }
+
+    profile.paid = true;
+    await profile.save();
+    res.json(profile);
   } catch (err) {
     console.error(err.message);
     res.status(500).send('Server Error');

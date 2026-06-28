@@ -7,6 +7,8 @@ import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
 import PublicProfile from './pages/PublicProfile';
 import ScanAlert from './pages/ScanAlert';
+import AdminDashboard from './pages/AdminDashboard';
+import LandingPage from './pages/LandingPage';
 import './index.css';
 
 const PrivateRoute = ({ children }) => {
@@ -15,15 +17,22 @@ const PrivateRoute = ({ children }) => {
   return user ? children : <Navigate to="/login" />;
 };
 
+const AdminRoute = ({ children }) => {
+  const { user, loading } = React.useContext(AuthContext);
+  if (loading) return <div>Loading...</div>;
+  return user && user.role === 'admin' ? children : <Navigate to="/login" />;
+};
+
 function App() {
   return (
     <AuthProvider>
       <Router>
         <Navbar />
         <Routes>
-          <Route path="/" element={<Navigate to="/dashboard" />} />
+          <Route path="/" element={<LandingPage />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
+          <Route path="/signup" element={<Register />} />
           <Route path="/profile/:id" element={<PublicProfile />} />
           <Route 
             path="/dashboard" 
@@ -39,6 +48,14 @@ function App() {
               <PrivateRoute>
                 <ScanAlert />
               </PrivateRoute>
+            } 
+          />
+          <Route 
+            path="/admin" 
+            element={
+              <AdminRoute>
+                <AdminDashboard />
+              </AdminRoute>
             } 
           />
         </Routes>

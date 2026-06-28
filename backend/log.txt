@@ -1,0 +1,3 @@
+◇ injecting env (9) from .env // tip: ⌘ custom filepath { path: '/custom/path/.env' }
+Server started on port 5001
+MongoDB Connection Error: Socket 'connect' timed out after 44953ms (connectTimeoutMS: 30000)

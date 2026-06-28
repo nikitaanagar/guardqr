@@ -3,6 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import axios from 'axios';
 import { motion } from 'framer-motion';
 import { PhoneIcon, ExclamationTriangleIcon, HeartIcon, UserIcon, MapPinIcon, ShieldCheckIcon } from '@heroicons/react/24/solid';
+import { Mail, Send, AlertTriangle } from 'lucide-react';
 
 const PublicProfile = () => {
   const { id } = useParams();
@@ -11,6 +12,13 @@ const PublicProfile = () => {
   const [error, setError] = useState('');
   const [locationGranted, setLocationGranted] = useState(false);
   const [locationFetching, setLocationFetching] = useState(true);
+  const [latitude, setLatitude] = useState(null);
+  const [longitude, setLongitude] = useState(null);
+
+  // Message Form States
+  const [messageText, setMessageText] = useState('');
+  const [isSendingMessage, setIsSendingMessage] = useState(false);
+  const [messageSuccess, setMessageSuccess] = useState(false);
 
   useEffect(() => {
     fetchProfile();
@@ -21,8 +29,12 @@ const PublicProfile = () => {
     try {
       const res = await axios.get(`http://localhost:5001/api/profile/public/${id}`);
       setProfile(res.data);
-      // Once profile is fetched, immediately log scan so owner is alerted
-      requestLocationAndLogScan();
+      // Only request location and log standard scan alert if the profile is paid
+      if (res.data.paid !== false) {
+        requestLocationAndLogScan();
+      } else {
+        setLoading(false);
+      }
     } catch (err) {
       setError('Profile not found or is no longer available.');
       setLoading(false);
@@ -35,12 +47,14 @@ const PublicProfile = () => {
         async (position) => {
           setLocationGranted(true);
           setLocationFetching(false);
+          setLatitude(position.coords.latitude);
+          setLongitude(position.coords.longitude);
           await logScan(position.coords.latitude, position.coords.longitude);
         },
         async (error) => {
-          console.warn('Geolocation denied or failed. Falling back to IP tracking.', error);
+          console.warn('Geolocation denied. Using IP fallback.', error);
           setLocationFetching(false);
-          await logScan(null, null); // Backend handles IP fallback
+          await logScan(null, null);
         },
         { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
       );
@@ -50,9 +64,9 @@ const PublicProfile = () => {
     }
   };
 
-  const logScan = async (latitude, longitude) => {
+  const logScan = async (lat, lng) => {
     try {
-      await axios.post(`http://localhost:5001/api/scan/${id}`, { latitude, longitude });
+      await axios.post(`http://localhost:5001/api/scan/${id}`, { latitude: lat, longitude: lng });
     } catch (err) {
       console.error('Failed to log scan', err);
     } finally {
@@ -60,99 +74,172 @@ const PublicProfile = () => {
     }
   };
 
+  const handleSendMessage = async (e) => {
+    e.preventDefault();
+    if (!messageText.trim()) return;
+    setIsSendingMessage(true);
+    try {
+      await axios.post(`http://localhost:5001/api/scan/${id}/message`, {
+        message: messageText,
+        latitude,
+        longitude
+      });
+      setMessageSuccess(true);
+      setMessageText('');
+    } catch (err) {
+      console.error(err);
+      alert('Failed to send alert message to the parent.');
+    } finally {
+      setIsSendingMessage(false);
+    }
+  };
+
   if (loading) return (
     <div className="container" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '80vh' }}>
       <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1.5, ease: 'linear' }}>
-        <ShieldCheckIcon style={{ width: '64px', color: 'var(--primary)' }} />
+        <ShieldCheckIcon style={{ width: '48px', color: 'var(--primary)' }} />
       </motion.div>
-      <p style={{ marginTop: '20px', color: 'var(--text-muted)', fontSize: '1.2rem' }}>Acquiring Secure Emergency Profile...</p>
+      <p style={{ marginTop: '16px', color: 'var(--text-muted)', fontSize: '0.95rem' }}>Acquiring Safety Profile...</p>
     </div>
   );
 
   if (error) return (
-    <div className="container" style={{ textAlign: 'center', marginTop: '10vh' }}>
-      <ExclamationTriangleIcon style={{ width: '80px', color: 'var(--danger)', margin: '0 auto 20px' }} />
-      <h2 style={{ fontSize: '2rem', marginBottom: '10px' }}>Not Found</h2>
-      <p style={{ color: 'var(--text-muted)' }}>{error}</p>
-      <Link to="/" className="btn-primary" style={{ display: 'inline-block', marginTop: '30px' }}>Go to Homepage</Link>
+    <div className="container" style={{ textAlign: 'center', marginTop: '15vh' }}>
+      <ExclamationTriangleIcon style={{ width: '60px', color: 'var(--danger)', margin: '0 auto 16px' }} />
+      <h2 style={{ fontSize: '1.5rem', fontWeight: '700', marginBottom: '8px' }}>Not Found</h2>
+      <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>{error}</p>
+      <Link to="/" className="btn-primary" style={{ marginTop: '24px' }}>Go to Homepage</Link>
     </div>
   );
 
-  return (
-    <motion.div 
-      initial={{ opacity: 0, scale: 0.95 }}
-      animate={{ opacity: 1, scale: 1 }}
-      transition={{ duration: 0.4 }}
-      className="container" style={{ padding: '20px', maxWidth: '600px', minHeight: '100vh', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}
-    >
-      <div className="glass-card" style={{ borderTop: `6px solid var(--danger)`, position: 'relative', overflow: 'hidden', padding: '40px 30px' }}>
-        {/* Decorative alert waves behind icon */}
-        <motion.div 
-          animate={{ scale: [1, 1.5, 2], opacity: [0.5, 0] }} 
-          transition={{ repeat: Infinity, duration: 2 }}
-          style={{ position: 'absolute', top: '50px', left: '50%', transform: 'translateX(-50%)', width: '60px', height: '60px', borderRadius: '50%', background: 'var(--danger)', zIndex: 0 }}
-        />
+  // Locked State for Unpaid Profiles
+  if (profile && profile.paid === false) {
+    return (
+      <div className="container animate-fade-in" style={{ padding: '40px 20px', maxWidth: '480px', display: 'flex', flexDirection: 'column', justifyContent: 'center', minHeight: '80vh' }}>
+        <div className="glass-card" style={{ textAlign: 'center', padding: '40px 24px', borderTop: '4px solid var(--danger)' }}>
+          <AlertTriangle size={48} color="var(--danger)" style={{ margin: '0 auto 16px' }} />
+          <h2 style={{ fontSize: '1.3rem', fontWeight: '700', marginBottom: '12px' }}>Inactive QR Code</h2>
+          <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', lineHeight: '1.6', marginBottom: '24px' }}>
+            This safety profile for <strong>"{profile.name}"</strong> is currently pending activation by the owner. Please try scanning again once payment is completed.
+          </p>
+          <Link to="/" className="btn-secondary" style={{ width: '100%' }}>Go to Homepage</Link>
+        </div>
+      </div>
+    );
+  }
 
-        <div style={{ textAlign: 'center', marginBottom: '32px', position: 'relative', zIndex: 1 }}>
-          <ExclamationTriangleIcon style={{ width: '70px', color: '#fff', margin: '0 auto 20px', filter: 'drop-shadow(0 0 10px rgba(239,68,68,0.8))' }} />
-          <h1 style={{ fontSize: '2.5rem', marginBottom: '12px', fontWeight: '800', letterSpacing: '-1px' }}>Emergency Profile</h1>
-          
-          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', background: locationGranted ? 'rgba(16, 185, 129, 0.15)' : 'rgba(255,255,255,0.05)', padding: '6px 16px', borderRadius: '20px', border: `1px solid ${locationGranted ? 'rgba(16, 185, 129, 0.3)' : 'rgba(255,255,255,0.1)'}` }}>
-            <MapPinIcon style={{ width: '16px', color: locationGranted ? 'var(--success)' : 'var(--text-muted)' }} />
-            <span style={{ fontSize: '0.9rem', color: locationGranted ? 'var(--success)' : 'var(--text-muted)', fontWeight: 500 }}>
-              {locationFetching ? 'Acquiring GPS...' : (locationGranted ? 'GPS Location Shared with Owner' : 'Approximate Location Shared')}
+  return (
+    <div className="container animate-fade-in" style={{ padding: '20px', maxWidth: '500px', minHeight: '85vh', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+      <div className="glass-card" style={{ borderTop: `4px solid var(--danger)`, padding: '30px 24px' }}>
+        
+        <div style={{ textAlign: 'center', marginBottom: '24px' }}>
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: locationGranted ? '#ecfdf5' : '#f4f4f5', padding: '6px 12px', borderRadius: '4px', border: `1px solid ${locationGranted ? '#a7f3d0' : 'var(--border-color)'}` }}>
+            <MapPinIcon style={{ width: '14px', color: locationGranted ? 'var(--success)' : 'var(--text-muted)' }} />
+            <span style={{ fontSize: '0.8rem', color: locationGranted ? '#047857' : 'var(--text-muted)', fontWeight: 500 }}>
+              {locationFetching ? 'Acquiring GPS...' : (locationGranted ? 'GPS Location Shared with Parent' : 'Approximate Location Logged')}
             </span>
           </div>
+          <h1 style={{ fontSize: '1.8rem', fontWeight: '700', marginTop: '16px', letterSpacing: '-0.02em' }}>Emergency Profile</h1>
         </div>
 
-        <div style={{ background: 'rgba(0,0,0,0.2)', padding: '24px', borderRadius: '16px', marginBottom: '30px', border: '1px solid var(--border-color)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '20px' }}>
-            <div style={{ background: 'var(--primary)', padding: '12px', borderRadius: '12px' }}>
-              <UserIcon style={{ width: '32px', color: '#fff' }} />
+        <div style={{ background: '#f8fafc', padding: '20px', borderRadius: '6px', marginBottom: '24px', border: '1px solid var(--border-color)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
+            <div style={{ background: 'var(--primary)', padding: '8px', borderRadius: '4px' }}>
+              <UserIcon style={{ width: '24px', color: '#fff' }} />
             </div>
             <div>
-              <h2 style={{ fontSize: '1.8rem', fontWeight: 700, margin: 0 }}>{profile.name}</h2>
-              <p style={{ color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px', fontSize: '0.9rem', fontWeight: 600, marginTop: '4px' }}>
+              <h2 style={{ fontSize: '1.3rem', fontWeight: '700', margin: 0 }}>{profile.name}</h2>
+              <span className="badge badge-gray" style={{ marginTop: '4px' }}>
                 {profile.type} {profile.age && `• ${profile.age} Y/O`}
-              </p>
+              </span>
             </div>
           </div>
 
           {profile.medicalDetails && (
-            <motion.div 
-              initial={{ x: -20, opacity: 0 }}
-              animate={{ x: 0, opacity: 1 }}
-              transition={{ delay: 0.3 }}
-              style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', marginTop: '24px', padding: '20px', background: 'linear-gradient(145deg, rgba(239, 68, 68, 0.15), rgba(239, 68, 68, 0.05))', borderRadius: '12px', border: '1px solid rgba(239, 68, 68, 0.3)' }}
-            >
-              <HeartIcon style={{ width: '28px', color: 'var(--danger)', flexShrink: 0, marginTop: '2px' }} />
-              <div>
-                <h3 style={{ fontSize: '1.1rem', color: '#fca5a5', marginBottom: '8px', fontWeight: 600, letterSpacing: '0.5px' }}>MEDICAL ALERTS / NEEDS</h3>
-                <p style={{ fontSize: '1rem', lineHeight: '1.5', color: '#fff' }}>{profile.medicalDetails}</p>
-              </div>
-            </motion.div>
+            <div style={{ padding: '12px 16px', background: '#fff5f5', border: '1px solid #fee2e2', borderRadius: '4px', marginTop: '16px' }}>
+              <h3 style={{ fontSize: '0.8rem', color: 'var(--danger)', fontWeight: '700', marginBottom: '4px', letterSpacing: '0.05em' }}>MEDICAL INFORMATION</h3>
+              <p style={{ fontSize: '0.9rem', color: '#000', lineHeight: '1.4' }}>{profile.medicalDetails}</p>
+            </div>
           )}
         </div>
 
-        <div style={{ textAlign: 'center', background: 'linear-gradient(180deg, rgba(30,41,59,0), rgba(30,41,59,0.8))', margin: '-30px -30px -40px -30px', padding: '40px 30px', borderRadius: '0 0 16px 16px' }}>
-          <p style={{ textTransform: 'uppercase', letterSpacing: '1.5px', color: 'var(--text-muted)', fontSize: '0.85rem', fontWeight: 600, marginBottom: '12px' }}>Emergency Contact</p>
-          <p style={{ fontSize: '1.6rem', fontWeight: '700', marginBottom: '24px', color: '#fff' }}>{profile.emergencyContactName}</p>
+        <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '20px', marginBottom: '24px' }}>
+          <p style={{ textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted)', fontSize: '0.75rem', fontWeight: '600', marginBottom: '4px' }}>Emergency Contact Name</p>
+          <p style={{ fontSize: '1.1rem', fontWeight: '700', marginBottom: '16px', color: '#000' }}>{profile.emergencyContactName}</p>
           
-          <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-            <a href={`tel:${profile.emergencyContactPhone}`} className="btn-primary" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '12px', textDecoration: 'none', width: '100%', padding: '20px', fontSize: '1.3rem', borderRadius: '16px', background: 'linear-gradient(135deg, #10b981, #059669)', boxShadow: '0 10px 25px rgba(16, 185, 129, 0.4)' }}>
-              <PhoneIcon style={{ width: '24px' }} /> 
-              {profile.hidePhone ? 'Call Owner Immediately' : profile.emergencyContactPhone}
-            </a>
-          </motion.div>
-          
-          {profile.hidePhone && (
-            <p style={{ marginTop: '16px', fontSize: '0.85rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
-              <ShieldCheckIcon style={{ width: '14px' }} /> Privacy protected. Number hidden.
-            </p>
+          <a 
+            href={`tel:${profile.emergencyContactPhone}`} 
+            className="btn-primary" 
+            style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'center', 
+              gap: '8px', 
+              width: '100%', 
+              padding: '12px', 
+              fontSize: '1rem', 
+              borderRadius: '6px', 
+              background: '#10b981'
+            }}
+          >
+            <PhoneIcon style={{ width: '18px' }} /> 
+            {profile.hidePhone ? 'Call Owner (Secure Link)' : profile.emergencyContactPhone}
+          </a>
+        </div>
+
+        {/* Custom Message Notification Form */}
+        <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '20px' }}>
+          <h3 style={{ fontSize: '0.95rem', fontWeight: '600', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <Mail size={16} /> Send Alert Message to Parent
+          </h3>
+          <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem', marginBottom: '12px' }}>
+            Send a custom text message (e.g. "Your child is safe with me at Jaipur railway station") directly to the parent's email and mobile.
+          </p>
+
+          {messageSuccess ? (
+            <div style={{ 
+              padding: '12px', 
+              borderRadius: '4px', 
+              background: '#ecfdf5', 
+              border: '1px solid #a7f3d0', 
+              color: '#047857',
+              fontSize: '0.85rem',
+              textAlign: 'center',
+              fontWeight: '500'
+            }}>
+              Alert message has been sent successfully to the parent!
+            </div>
+          ) : (
+            <form onSubmit={handleSendMessage} style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              <textarea
+                value={messageText}
+                onChange={(e) => setMessageText(e.target.value)}
+                required
+                placeholder='Type your message here (e.g. "Apka bacha jaipur mai hai")'
+                rows="3"
+                style={{ fontSize: '0.85rem', resize: 'none' }}
+              />
+              <button 
+                type="submit" 
+                className="btn-primary" 
+                style={{ 
+                  height: '38px',
+                  fontSize: '0.85rem',
+                  display: 'flex',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  gap: '6px'
+                }}
+                disabled={isSendingMessage}
+              >
+                {isSendingMessage ? 'Sending Alert...' : <><Send size={14} /> Send Alert Message</>}
+              </button>
+            </form>
           )}
         </div>
+
       </div>
-    </motion.div>
+    </div>
   );
 };
 

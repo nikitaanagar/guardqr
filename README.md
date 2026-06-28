@@ -1,81 +1,70 @@
 # GuardianQR - QR-Based Safety Identification Platform
 
-GuardianQR is a premium, industry-level safety platform. It enables users to create emergency profiles for children, pets, or the elderly, accessible via scannable QR tags.
-
-## 🌟 Key Features
-- **Instant Scan Alerts:** Phone SMS notifications (via Twilio) instantly notify the owner when a tag is scanned.
-- **Smart Geolocation:** Captures the location of the scan (via GPS High-Accuracy or IP-based fallback) and provides a Google Maps link.
-- **Privacy Protection:** Visually hides direct phone numbers from the scanner while keeping a secure actionable "Call Owner" button.
-- **Premium Startup UI:** Developed with modern glassmorphism, Framer Motion animations, and a responsive mobile-first architecture for the public profiles.
+GuardianQR is a premium, flat-designed safety platform. It enables users to create emergency profiles for children, pets, or the elderly, which are accessible via custom scannable QR tags.
 
 ---
 
-## 🚀 Step-by-Step Setup Guide
+## 🌟 Key Features
 
-Follow these steps exactly to run GuardianQR locally on your machine.
+- **Sleek Public Landing Page**: An interactive 11-section landing page with sticky navigation headers, section scroll fade-in animations, FAQ accordions, and a real-time switchable pricing toggle.
+- **Official Google OAuth 2.0 Sign-In**: Fully integrated client-side Google Identity Services (GIS) buttons and secure backend ID Token verification.
+- **Hiding Links from Finders**: The public emergency scan views (`/profile/:id`) hide the global navbar, protecting search options and restricting auth controls exclusively to owners.
+- **Paid QR Status & Checkout Flow**: Supports locked QR tag downloads. Owners can perform a checkout simulation using a card sheet to mark tags as active. Unpaid tags block finders from seeing emergency data.
+- **Email & SMS Alerts on Scan**: Scan events trigger automated email notifications directly to the owner's registered email address (containing location data and a Google Maps link), along with real-time Twilio SMS alerts.
+- **Unified Admin Dashboard**: Dedicated administrative console `/admin` for `nikitanagar.1201@gmail.com` to manage all users, safety profiles, and scan logs.
+
+---
+
+## 🚀 Setup & Installation Guide
 
 ### 1. Prerequisites
-Ensure you have Node.js and MongoDB installed and running.
+Ensure you have **Node.js** and **MongoDB** installed and running on your local machine.
 
-### 2. Environment Variables (.env)
-In the `/backend/` folder, you must have a `.env` file for the environment variables. 
-Create `backend/.env` and paste:
+### 2. Configure Backend Environment
+Create a `backend/.env` file in the `/backend` folder and populate the following keys:
 ```env
-PORT=5000
+PORT=5001
 MONGO_URI=mongodb://127.0.0.1:27017/guardianqr
-JWT_SECRET=my_super_secret_jwt_key_123
+JWT_SECRET=your_super_secret_jwt_key
 
-# Twilio SMS Credentials (Leave empty to use Mock SMS logging in terminal)
+# Twilio Credentials (Optional - Falls back to console logs if blank)
 TWILIO_ACCOUNT_SID=
 TWILIO_AUTH_TOKEN=
 TWILIO_PHONE_NUMBER=
+
+# NodeMailer Credentials (Optional - Mock logs to console if blank)
+EMAIL_USER=
+EMAIL_PASS=
+
+# Google OAuth Credentials
+GOOGLE_CLIENT_ID=your_google_oauth_client_id_here
+GOOGLE_CLIENT_SECRET=your_google_oauth_client_secret_here
 ```
 
-### 3. Start the Backend Server
-Open a terminal and run the following commands:
+### 3. Configure Frontend Environment
+Create a `frontend/.env` file in the `/frontend` folder and populate your client ID:
+```env
+REACT_APP_GOOGLE_CLIENT_ID=your_google_oauth_client_id_here
+```
+
+### 4. Start the Backend Server
 ```bash
-# Navigate to the backend folder
 cd backend
-
-# Install all backend dependencies
 npm install
-
-# Start the Express server
-npm start 
-# Alternatively, for development: npm run dev
-```
-You should see: `Server started on port 5000` and `MongoDB Connected`.
-
-### 4. Start the Frontend React App
-Open a *new* terminal window and run:
-```bash
-# Navigate to the frontend folder
-cd frontend
-
-# Install all frontend dependencies
-npm install
-
-# Start the React app
 npm start
 ```
-This will automatically open your browser to `http://localhost:3000`.
+You should see: `Server started on port 5001` and `MongoDB Connected`.
+
+### 5. Start the Frontend App
+```bash
+cd ../frontend
+npm install
+npm start
+```
+This will start the development server and open `http://localhost:3000` automatically.
 
 ---
 
-## 🛠 Project Structure & Architecture Breakdown
-
-### Frontend (`/frontend`)
-- **React.js & Framer Motion:** The UI utilizes advanced animations and a glassmorphic design system.
-- **`src/pages/Dashboard.jsx`:** The protected owner dashboard. Fetches user profiles from the backend and allows CRUD operations. Highlights the generated `QRCard` components.
-- **`src/pages/PublicProfile.jsx`:** The mobile-optimized view for anyone scanning the QR code. Uses the browser Geolocation API (`navigator.geolocation`) upon load to track the finder's location and ping the `/api/scan/:id` backend route.
-- **`src/components/QRCard.jsx`:** Uses `qrcode.react` to generate high-resolution scannable SVG QR codes pointing dynamically to the PublicProfile URL.
-
-### Backend (`/backend`)
-- **Express.js & MongoDB:** Secure REST API architecture with JWT authentication.
-- **Models:**
-  - `User.js`: Standard authentication schema.
-  - `Profile.js`: Stores info about the pet/child/elderly, medical details, the emergency contact phone number, and the `hidePhone` privacy boolean.
-  - `ScanLog.js`: Logs IP, latitude, longitude, and approximate physical location for every single scan.
-- **Controllers & Routes:**
-  - `routes/scan.js`: The most critical route. Triggered when the QR is scanned. Retrieves location metrics (with an IP fallback `geolocate.js`), saves a `ScanLog`, and triggers the Twilio SMS sender to immediately text the owner's emergency contact phone.
-  - `utils/sms.js`: Connects to the Twilio API. If Twilio keys are absent, it safely falls back to logging the SMS message in the backend terminal (Mocking), allowing seamless local testing.
+## 🛡️ Administrative Console
+- Log in or register using Google with **`nikitanagar.1201@gmail.com`** to automatically receive the admin role.
+- Access the panel at **`http://localhost:3000/admin`** to manage global platforms records and scan events.

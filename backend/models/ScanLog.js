@@ -18,6 +18,9 @@ const ScanLogSchema = new mongoose.Schema({
   approximateLocation: {
     type: String,
   },
+  message: {
+    type: String,
+  },
 }, { timestamps: true });
 
 module.exports = mongoose.model('ScanLog', ScanLogSchema);

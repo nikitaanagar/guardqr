@@ -27,6 +27,7 @@ app.use(cors({
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/profile', require('./routes/profile'));
 app.use('/api/scan', require('./routes/scan'));
+app.use('/api/admin', require('./routes/admin'));
 
 // Generic route for root
 app.get('/', (req, res) => res.send('GuardianQR API Running'));

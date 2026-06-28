@@ -12,7 +12,16 @@ const UserSchema = new mongoose.Schema({
   },
   password: {
     type: String,
-    required: true,
+    required: false, // Optional for Google Auth users
+  },
+  googleId: {
+    type: String,
+    required: false,
+  },
+  role: {
+    type: String,
+    enum: ['user', 'admin'],
+    default: 'user',
   },
 }, { timestamps: true });
 
