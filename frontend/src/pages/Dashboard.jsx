@@ -3,7 +3,7 @@ import api from '../api/axios';
 import { AuthContext } from '../context/AuthContext';
 import QRCard from '../components/QRCard';
 import { motion, AnimatePresence } from 'framer-motion';
-import { PlusIcon, TrashIcon, UserCircleIcon, ShieldCheckIcon, AdjustmentsHorizontalIcon, CreditCardIcon } from '@heroicons/react/24/outline';
+import { PlusIcon, TrashIcon, UserCircleIcon, AdjustmentsHorizontalIcon, CreditCardIcon } from '@heroicons/react/24/outline';
 import { ShieldAlert } from 'lucide-react';
 
 const Dashboard = () => {

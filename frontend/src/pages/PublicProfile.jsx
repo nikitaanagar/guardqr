@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import api from '../api/axios';
 import { motion } from 'framer-motion';
-import { PhoneIcon, ExclamationTriangleIcon, HeartIcon, UserIcon, MapPinIcon, ShieldCheckIcon } from '@heroicons/react/24/solid';
+import { PhoneIcon, ExclamationTriangleIcon, UserIcon, MapPinIcon, ShieldCheckIcon } from '@heroicons/react/24/solid';
 import { Mail, Send, AlertTriangle } from 'lucide-react';
 
 const PublicProfile = () => {

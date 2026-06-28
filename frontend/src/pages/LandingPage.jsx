@@ -4,7 +4,6 @@ import {
   Shield, 
   Menu, 
   X, 
-  ChevronRight, 
   ChevronDown, 
   UserPlus, 
   QrCode, 
