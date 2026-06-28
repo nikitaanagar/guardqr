@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import axios from 'axios';
+import api from '../api/axios';
 import { motion } from 'framer-motion';
 import { PhoneIcon, ExclamationTriangleIcon, HeartIcon, UserIcon, MapPinIcon, ShieldCheckIcon } from '@heroicons/react/24/solid';
 import { Mail, Send, AlertTriangle } from 'lucide-react';
@@ -27,7 +27,7 @@ const PublicProfile = () => {
 
   const fetchProfile = async () => {
     try {
-      const res = await axios.get(`http://localhost:5001/api/profile/public/${id}`);
+      const res = await api.get(`/profile/public/${id}`);
       setProfile(res.data);
       // Only request location and log standard scan alert if the profile is paid
       if (res.data.paid !== false) {
@@ -66,7 +66,7 @@ const PublicProfile = () => {
 
   const logScan = async (lat, lng) => {
     try {
-      await axios.post(`http://localhost:5001/api/scan/${id}`, { latitude: lat, longitude: lng });
+      await api.post(`/scan/${id}`, { latitude: lat, longitude: lng });
     } catch (err) {
       console.error('Failed to log scan', err);
     } finally {
@@ -79,7 +79,7 @@ const PublicProfile = () => {
     if (!messageText.trim()) return;
     setIsSendingMessage(true);
     try {
-      await axios.post(`http://localhost:5001/api/scan/${id}/message`, {
+      await api.post(`/scan/${id}/message`, {
         message: messageText,
         latitude,
         longitude
